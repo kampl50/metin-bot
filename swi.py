@@ -47,7 +47,8 @@ KEY_CODES = {
     '1': 0x02,  # Scancode for the "1" key
     '2': 0x03,  # Scancode for the "2" key
     '3': 0x04,  # Scancode for the "3" key
-    'Space': 0x39  # Scancode for the "Space" key
+    'Space': 0x39,  # Scancode for the "Space" key
+    'z': 0x2C   # Scancode for the "z" key
 }
 
 def PressKey(hexKeyCode):
@@ -133,15 +134,15 @@ class KeyPresser:
     def __init__(self):
         self.running = False
         self.thread = None
-        self.keys = set()  # Default to empty set
+        self.keys = {}  # Change from set to dict to store frequencies
 
-    def add_key(self, key):
+    def add_key(self, key, frequency):
         if key in KEY_CODES:
-            self.keys.add(KEY_CODES[key])
+            self.keys[KEY_CODES[key]] = frequency
 
     def remove_key(self, key):
         if key in KEY_CODES:
-            self.keys.discard(KEY_CODES[key])
+            self.keys.pop(KEY_CODES[key], None)
 
     def start_pressing(self):
         self.running = True
@@ -155,11 +156,11 @@ class KeyPresser:
 
     def press_keys(self):
         while self.running:
-            for key in self.keys:
+            for key, freq in self.keys.items():
                 PressKey(key)
                 time.sleep(0.1)
                 ReleaseKey(key)
-                time.sleep(1)
+                time.sleep(freq)
 
 # Create the GUI
 root = tk.Tk()
@@ -190,35 +191,39 @@ pid_label.grid(row=0, column=0, padx=5)
 pid_entry = tk.Entry(frame)
 pid_entry.grid(row=0, column=1, padx=5)
 
-key_label = tk.Label(frame, text="Select Keys to Press:")
-key_label.grid(row=1, column=0, padx=5)
+key_label = tk.Label(frame, text="Select Keys to Press and Frequency (s):")
+key_label.grid(row=1, column=0, padx=5, columnspan=2)
 
 keys_frame = tk.Frame(frame)
-keys_frame.grid(row=1, column=1, padx=5)
+keys_frame.grid(row=2, column=0, columnspan=2, padx=5)
 
 key_vars = {
-    '1': tk.BooleanVar(),
-    '2': tk.BooleanVar(),
-    '3': tk.BooleanVar(),
-    'Space': tk.BooleanVar()
+    '1': (tk.BooleanVar(), tk.DoubleVar(value=1.0)),
+    '2': (tk.BooleanVar(), tk.DoubleVar(value=1.0)),
+    '3': (tk.BooleanVar(), tk.DoubleVar(value=1.0)),
+    'Space': (tk.BooleanVar(), tk.DoubleVar(value=1.0)),
+    'z': (tk.BooleanVar(), tk.DoubleVar(value=1.0))
 }
 
 def on_key_change():
     kp.keys.clear()
-    for key, var in key_vars.items():
+    for key, (var, freq_var) in key_vars.items():
         if var.get():
-            kp.add_key(key)
+            kp.add_key(key, freq_var.get())
         else:
             kp.remove_key(key)
 
-for key in key_vars:
-    checkbox = tk.Checkbutton(keys_frame, text=key, variable=key_vars[key], command=on_key_change)
-    checkbox.pack(anchor='w')
+for idx, key in enumerate(key_vars):
+    var, freq_var = key_vars[key]
+    checkbox = tk.Checkbutton(keys_frame, text=key, variable=var, command=on_key_change)
+    checkbox.grid(row=idx, column=0, sticky='w')
+    freq_entry = tk.Entry(keys_frame, textvariable=freq_var, width=5)
+    freq_entry.grid(row=idx, column=1, padx=5)
 
 start_button = tk.Button(frame, text="Start", command=start)
-start_button.grid(row=2, column=0, padx=5, pady=5)
+start_button.grid(row=3, column=0, padx=5, pady=5)
 
 stop_button = tk.Button(frame, text="Stop", command=stop)
-stop_button.grid(row=2, column=1, padx=5, pady=5)
+stop_button.grid(row=3, column=1, padx=5, pady=5)
 
 root.mainloop()
