@@ -65,7 +65,6 @@ def ReleaseKey(hexKeyCode):
     x = Input(ctypes.c_ulong(1), ii_)
     SendInput(1, ctypes.pointer(x), ctypes.sizeof(x))
 
-# Main classes
 class WindowManager:
     def __init__(self):
         self.pids = []
@@ -133,8 +132,8 @@ class WindowManager:
 class KeyPresser:
     def __init__(self):
         self.running = False
-        self.thread = None
-        self.keys = {}  # Change from set to dict to store frequencies
+        self.threads = []
+        self.keys = {}
 
     def add_key(self, key, frequency):
         if key in KEY_CODES:
@@ -146,23 +145,26 @@ class KeyPresser:
 
     def start_pressing(self):
         self.running = True
-        self.thread = threading.Thread(target=self.press_keys)
-        self.thread.start()
+        self.threads = []
+        for key, frequency in self.keys.items():
+            thread = threading.Thread(target=self.press_key, args=(key, frequency))
+            thread.start()
+            self.threads.append(thread)
 
     def stop_pressing(self):
         self.running = False
-        if self.thread:
-            self.thread.join()
+        for thread in self.threads:
+            if thread.is_alive():
+                thread.join()
 
-    def press_keys(self):
+    def press_key(self, key, frequency):
         while self.running:
-            for key, freq in self.keys.items():
-                PressKey(key)
-                time.sleep(0.1)
-                ReleaseKey(key)
-                time.sleep(freq)
+            PressKey(key)
+            time.sleep(0.1)
+            ReleaseKey(key)
+            time.sleep(frequency)
 
-# Create the GUI
+# Tworzenie GUI
 root = tk.Tk()
 root.title("Window Switcher")
 
@@ -198,11 +200,11 @@ keys_frame = tk.Frame(frame)
 keys_frame.grid(row=2, column=0, columnspan=2, padx=5)
 
 key_vars = {
-    '1': (tk.BooleanVar(), tk.DoubleVar(value=1.0)),
+    '1': (tk.BooleanVar(), tk.DoubleVar(value=10.0)),
     '2': (tk.BooleanVar(), tk.DoubleVar(value=1.0)),
     '3': (tk.BooleanVar(), tk.DoubleVar(value=1.0)),
     'Space': (tk.BooleanVar(), tk.DoubleVar(value=1.0)),
-    'z': (tk.BooleanVar(), tk.DoubleVar(value=1.0))
+    'z': (tk.BooleanVar(), tk.DoubleVar(value=0.5))
 }
 
 def on_key_change():
