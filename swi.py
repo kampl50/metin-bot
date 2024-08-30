@@ -71,6 +71,7 @@ class WindowManager:
         self.hwnds = []
         self.running = False
         self.current_index = 0
+        self.switch_interval = 1500  # Default interval is 1.5 seconds
 
     def get_hwnds_for_pid(self, pid):
         def callback(hwnd, hwnds):
@@ -127,7 +128,7 @@ class WindowManager:
             return
         self.bring_window_to_foreground(self.hwnds[self.current_index])
         self.current_index = (self.current_index + 1) % len(self.hwnds)
-        root.after(3000, self.switch_windows)
+        root.after(int(self.switch_interval), self.switch_windows)
 
 class KeyPresser:
     def __init__(self):
@@ -173,12 +174,13 @@ kp = KeyPresser()
 
 def start():
     try:
-        pids = list(map(int, pid_entry.get().split()))
+        pids = [int(pid_entry.get()) for pid_entry in pid_entries if pid_entry.get().isdigit()]
         wm.pids = pids
+        wm.switch_interval = float(switch_interval_entry.get()) * 1000  # Update switch interval
         wm.start_switching()
         kp.start_pressing()
     except ValueError:
-        messagebox.showerror("Invalid Input", "Please enter a valid list of PIDs separated by spaces.")
+        messagebox.showerror("Invalid Input", "Please enter valid PIDs.")
 
 def stop():
     wm.stop_switching()
@@ -187,24 +189,27 @@ def stop():
 frame = tk.Frame(root)
 frame.pack(pady=10)
 
-pid_label = tk.Label(frame, text="Enter PIDs (separated by spaces):")
-pid_label.grid(row=0, column=0, padx=5)
+pid_label = tk.Label(frame, text="Enter up to 6 PIDs:")
+pid_label.grid(row=0, column=0, padx=5, columnspan=2)
 
-pid_entry = tk.Entry(frame)
-pid_entry.grid(row=0, column=1, padx=5)
+pid_entries = []
+for i in range(6):
+    pid_entry = tk.Entry(frame, width=10)
+    pid_entry.grid(row=i+1, column=0, padx=5, pady=2)
+    pid_entries.append(pid_entry)
 
 key_label = tk.Label(frame, text="Select Keys to Press and Frequency (s):")
-key_label.grid(row=1, column=0, padx=5, columnspan=2)
+key_label.grid(row=7, column=0, padx=5, columnspan=2)
 
 keys_frame = tk.Frame(frame)
-keys_frame.grid(row=2, column=0, columnspan=2, padx=5)
+keys_frame.grid(row=8, column=0, columnspan=2, padx=5)
 
 key_vars = {
-    '1': (tk.BooleanVar(), tk.DoubleVar(value=10.0)),
+    '1': (tk.BooleanVar(), tk.DoubleVar(value=0.3)),
     '2': (tk.BooleanVar(), tk.DoubleVar(value=1.0)),
     '3': (tk.BooleanVar(), tk.DoubleVar(value=1.0)),
     'Space': (tk.BooleanVar(), tk.DoubleVar(value=1.0)),
-    'z': (tk.BooleanVar(), tk.DoubleVar(value=0.5))
+    'z': (tk.BooleanVar(), tk.DoubleVar(value=0.3))
 }
 
 def on_key_change():
@@ -222,10 +227,17 @@ for idx, key in enumerate(key_vars):
     freq_entry = tk.Entry(keys_frame, textvariable=freq_var, width=5)
     freq_entry.grid(row=idx, column=1, padx=5)
 
+switch_interval_label = tk.Label(frame, text="Switch Interval (s):")
+switch_interval_label.grid(row=9, column=0, padx=5)
+
+switch_interval_entry = tk.Entry(frame)
+switch_interval_entry.grid(row=9, column=1, padx=5)
+switch_interval_entry.insert(0, "1.5")  # Default value
+
 start_button = tk.Button(frame, text="Start", command=start)
-start_button.grid(row=3, column=0, padx=5, pady=5)
+start_button.grid(row=10, column=0, padx=5, pady=5)
 
 stop_button = tk.Button(frame, text="Stop", command=stop)
-stop_button.grid(row=3, column=1, padx=5, pady=5)
+stop_button.grid(row=10, column=1, padx=5, pady=5)
 
 root.mainloop()
